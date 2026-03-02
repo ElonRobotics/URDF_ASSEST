@@ -1,0 +1,109 @@
+const fs = require('fs');
+const path = require('path');
+const archiver = require('archiver');
+
+/**
+ * 遍历仓库根目录下的所有文件夹，将每个文件夹压缩为 zip 文件，
+ * 存放在 bundle/ 文件夹中，并生成 bundle/list.json 记录文件列表和构建时间。
+ */
+
+// 需要排除的文件夹
+const EXCLUDE_DIRS = new Set(["bundle", "utils", ".github", ".git"]);
+
+/**
+ * 压缩单个文件夹
+ * @param {string} sourceDir 源文件夹路径
+ * @param {string} outPath 输出 zip 文件路径
+ * @param {string} rootDir 仓库根目录，用于计算相对路径
+ * @returns {Promise<void>}
+ */
+function zipDirectory(sourceDir, outPath, rootDir) {
+    return new Promise((resolve, reject) => {
+        const output = fs.createWriteStream(outPath);
+        const archive = archiver('zip', {
+            zlib: { level: 9 } // 设置压缩级别
+        });
+
+        output.on('close', () => {
+            console.log(`压缩完成: ${archive.pointer()} total bytes`);
+            resolve();
+        });
+
+        archive.on('error', (err) => {
+            reject(err);
+        });
+
+        archive.pipe(output);
+
+        // 获取文件夹名称，作为 zip 内部的根路径
+        const dirName = path.basename(sourceDir);
+
+        // 将文件夹内容添加到压缩包
+        // 注意：我们希望 zip 内部包含文件夹本身（即 fourier_n1/file1, fourier_n1/file2...）
+        // 这与原 python 逻辑 `arcname = os.path.relpath(file_path, root_dir)` 一致
+        archive.directory(sourceDir, dirName);
+
+        archive.finalize();
+    });
+}
+
+async function main() {
+    // 获取仓库根目录（脚本所在目录的上级）
+    const scriptDir = __dirname;
+    const rootDir = path.dirname(scriptDir);
+
+    // bundle 输出目录
+    const bundleDir = path.join(rootDir, "bundle");
+
+    // 如果 bundle 目录已存在，先清空
+    if (fs.existsSync(bundleDir)) {
+        console.log(`正在清空现有目录: ${bundleDir}`);
+        fs.rmSync(bundleDir, { recursive: true, force: true });
+    }
+    fs.mkdirSync(bundleDir, { recursive: true });
+
+    // 遍历根目录下的所有文件夹
+    const items = fs.readdirSync(rootDir, { withFileTypes: true });
+    const dirsToZip = items
+        .filter(item => item.isDirectory() && !EXCLUDE_DIRS.has(item.name))
+        .map(item => item.name)
+        .sort();
+
+    const buildTime = new Date().toISOString().replace(/\.\d{3}Z$/, 'Z');
+    const files = [];
+
+    for (const dirName of dirsToZip) {
+        const dirPath = path.join(rootDir, dirName);
+        const zipName = `${dirName}.zip`;
+        const zipPath = path.join(bundleDir, zipName);
+
+        console.log(`正在压缩: ${dirName} -> ${zipName}`);
+
+        try {
+            await zipDirectory(dirPath, zipPath, rootDir);
+            files.push(zipName);
+        } catch (error) {
+            console.error(`压缩 ${dirName} 失败:`, error.message);
+        }
+    }
+
+    // 生成 list.json
+    const listData = {
+        build_time: buildTime,
+        files: files,
+    };
+
+    const listJsonPath = path.join(bundleDir, "list.json");
+    fs.writeFileSync(listJsonPath, JSON.stringify(listData, null, 2), 'utf-8');
+
+    console.log(`\n完成！共压缩 ${files.length} 个文件夹`);
+    console.log(`构建时间: ${buildTime}`);
+    console.log(`输出目录: ${bundleDir}`);
+}
+
+if (require.main === module) {
+    main().catch(err => {
+        console.error("运行失败:", err);
+        process.exit(1);
+    });
+}

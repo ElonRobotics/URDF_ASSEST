@@ -1,0 +1,358 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>URDF Asset Release</title>
+    <meta name="description" content="URDF 机器人资产包下载" />
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        transition: all 0.3s ease;
+      }
+
+      :root {
+        background: #0a0e17;
+        color: #cbd5e1;
+        min-height: 100vh;
+        font-weight: 500;
+      }
+
+      body {
+        width: 100%;
+        max-width: 720px;
+        margin: 3rem auto;
+      }
+
+      h1 {
+        font-size: 2rem;
+        font-weight: 700;
+        background: linear-gradient(135deg, #60a5fa, #a78bfa, #f472b6);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        margin-bottom: 0.5rem;
+      }
+
+      .build-time {
+        font-size: 0.875rem;
+        color: #64748b;
+      }
+
+      .section {
+        margin-bottom: 1.5rem;
+      }
+
+      .flex-column {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+      }
+
+      .flex-center {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .flex-space {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      .section-title {
+        font-size: 1.15rem;
+        font-weight: 600;
+        margin-bottom: 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      }
+
+      .file-item {
+        padding: 0.5rem 1rem;
+        background: rgba(255, 255, 255, 0.02);
+        border: 1px solid rgba(255, 255, 255, 0.04);
+        border-radius: 12px;
+      }
+
+      .file-item:hover {
+        background: rgba(255, 255, 255, 0.06);
+        border-color: rgba(167, 139, 250, 0.25);
+        transform: translateY(-1px);
+      }
+
+      .file-name {
+        font-size: 0.95rem;
+        word-break: break-all;
+      }
+
+      .download-btn {
+        padding: 0.2rem 1rem;
+        color: #60a5fa;
+        background: rgba(96, 165, 250, 0.1);
+        border: 1px solid rgba(96, 165, 250, 0.25);
+        border-radius: 12px;
+        text-decoration: none;
+        white-space: nowrap;
+      }
+
+      .download-btn:hover {
+        background: rgba(96, 165, 250, 0.2);
+        border-color: rgba(96, 165, 250, 0.5);
+        transform: translateY(-1px);
+      }
+
+      .icon-download {
+        width: 14px;
+        height: 14px;
+      }
+
+      .loading {
+        text-align: center;
+        padding: 3rem;
+        color: #f87171;
+      }
+
+      .source-group-title {
+        font-size: 1rem;
+        color: #a78bfa;
+        cursor: pointer;
+        user-select: none;
+        padding: 0.5rem;
+        border-radius: 8px;
+      }
+
+      .source-group-title:hover {
+        background: rgba(167, 139, 250, 0.1);
+      }
+
+      .chevron-icon {
+        width: 18px;
+        height: 18px;
+        color: #64748b;
+      }
+
+      .chevron-rotated {
+        transform: rotate(180deg);
+      }
+
+      .source-group-desc {
+        font-size: 0.8rem;
+        color: #64748b;
+      }
+
+      .source-file-list {
+        gap: 0.4rem;
+        padding-top: 0.5rem;
+        overflow: hidden;
+      }
+
+      .source-tag {
+        font-size: 0.65rem;
+        padding: 0.15rem 0.5rem;
+        border-radius: 4px;
+        margin-right: 0.5rem;
+      }
+
+      .tag-urdf {
+        background: rgba(96, 165, 250, 0.15);
+        color: #60a5fa;
+      }
+
+      .tag-mjcf {
+        background: rgba(52, 211, 153, 0.15);
+        color: #34d399;
+      }
+
+      .tag-preview {
+        background: rgba(251, 191, 36, 0.15);
+        color: #fbbf24;
+      }
+
+      .tag-mesh {
+        background: rgba(148, 163, 184, 0.1);
+        color: #94a3b8;
+      }
+
+      .links {
+        font-size: 0.875rem;
+        color: #64748b;
+      }
+
+      .links a {
+        color: #60a5fa;
+        text-decoration: none;
+      }
+
+      .links a:hover {
+        text-decoration: underline;
+      }
+    </style>
+  </head>
+
+  <body>
+    <h1>URDF Asset Download</h1>
+    <div class="links section">
+      <p class="flex-column build-time" id="buildTime">加载中...</p>
+      <div>
+        Github Pages:
+        <a href="https://elonrobotics.github.io/URDF_ASSEST/">https://elonrobotics.github.io/URDF_ASSEST/</a>
+      </div>
+      <div>国内加速: <a href="https://urdf.elonrobotics.ekuai.tech/">https://urdf.elonrobotics.ekuai.tech/</a></div>
+    </div>
+    <!-- Bundle 区域 -->
+    <div class="section">
+      <h2 class="section-title">📦 Bundle</h2>
+      <div class="flex-column" id="bundleList">
+        <div class="loading">正在加载文件列表...</div>
+      </div>
+    </div>
+
+    <!-- Source 区域 -->
+    <div class="section">
+      <h2 class="section-title">📂 Source</h2>
+      <div id="sourceList">
+        <div class="loading">正在加载源文件...</div>
+      </div>
+    </div>
+
+    <script>
+      const BUNDLE_BASE = './bundle';
+
+      const DOWNLOAD_ICON = `<svg class="icon-download" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>`;
+
+      const CHEVRON_ICON = `<svg class="chevron-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>`;
+
+      function renderFileItem(name, href) {
+        return `
+        <div class="flex-space file-item">
+          <span class="file-name">${name}</span>
+          <a class="download-btn" href="${href}" download>${DOWNLOAD_ICON}</a>
+        </div>`;
+      }
+
+      function renderSourceFileItem(filePath, folderName, tag) {
+        const fileName = filePath.split('/').pop();
+        const tagClass = 'tag-' + tag;
+        return `
+        <div class="flex-space file-item">
+          <div class="flex-center">
+            <span class="source-tag ${tagClass}">${tag.toUpperCase()}</span>
+            <span class="file-name">${filePath}</span>
+          </div>
+          <a class="download-btn" href="./${folderName}/${filePath}" download>${DOWNLOAD_ICON}</a>
+        </div>`;
+      }
+
+      function toggleSource(folder) {
+        const listEl = document.getElementById(`list-${folder}`);
+        const chevronEl = document.getElementById(`chevron-${folder}`);
+        const isHidden = listEl.style.display === 'none';
+
+        listEl.style.display = isHidden ? 'flex' : 'none';
+        if (isHidden) {
+          chevronEl.classList.add('chevron-rotated');
+        } else {
+          chevronEl.classList.remove('chevron-rotated');
+        }
+      }
+
+      async function loadData() {
+        const bundleListEl = document.getElementById('bundleList');
+        const sourceListEl = document.getElementById('sourceList');
+        const buildTimeEl = document.getElementById('buildTime');
+
+        try {
+          const res = await fetch(`${BUNDLE_BASE}/list.json`);
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          const data = await res.json();
+
+          // 显示构建时间
+          const buildDate = new Date(data.build_time);
+          buildTimeEl.textContent = `构建时间: ${buildDate.toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' })}`;
+
+          // 渲染 Bundle 列表
+          if (!data.files || data.files.length === 0) {
+            bundleListEl.innerHTML = '<div class="loading">暂无可用文件</div>';
+            sourceListEl.innerHTML = '<div class="loading">暂无源文件</div>';
+            return;
+          }
+
+          bundleListEl.innerHTML = data.files.map(name => renderFileItem(name, `${BUNDLE_BASE}/${name}`)).join('');
+
+          // 加载 Source：根据 bundle 文件名推导文件夹名，加载 manifest.json
+          const folderNames = data.files.map(f => f.replace(/\.zip$/, ''));
+          const manifests = await Promise.all(
+            folderNames.map(async folder => {
+              try {
+                const mRes = await fetch(`./${folder}/manifest.json`);
+                if (!mRes.ok) return null;
+                const manifest = await mRes.json();
+                return { folder, manifest };
+              } catch {
+                return null;
+              }
+            }),
+          );
+
+          const validManifests = manifests.filter(m => m !== null);
+          if (validManifests.length === 0) {
+            sourceListEl.innerHTML = '<div class="loading">未找到 manifest.json</div>';
+            return;
+          }
+
+          sourceListEl.innerHTML = validManifests
+            .map(({ folder, manifest }) => {
+              const files = [];
+
+              if (manifest.preview) {
+                files.push(renderSourceFileItem(manifest.preview, folder, 'preview'));
+              }
+              if (manifest.urdf) {
+                files.push(renderSourceFileItem(manifest.urdf, folder, 'urdf'));
+              }
+              if (manifest.mjcf) {
+                files.push(renderSourceFileItem(manifest.mjcf, folder, 'mjcf'));
+              }
+              if (manifest.meshes && manifest.meshes.length > 0) {
+                manifest.meshes.forEach(mesh => {
+                  files.push(renderSourceFileItem(mesh, folder, 'mesh'));
+                });
+              }
+
+              const safeFolder = folder.replace(/[^a-zA-Z0-9]/g, '_');
+
+              const previewImgHtml = manifest.preview
+                ? `<div class="flex-center" style="margin-right:0.5rem"><img src="./${folder}/${manifest.preview}" alt="${manifest.name || folder} Preview" class="source-preview-img" /></div>`
+                : '';
+
+              return `
+            <div class="section">
+              <div class="flex-space source-group-title" onclick="toggleSource('${safeFolder}')">
+                <div class="flex-column">
+                  <div>🤖 ${manifest.name || folder}</div>
+                  ${manifest.description ? `<div class="source-group-desc">${manifest.description}</div>` : ''}
+                </div>
+                <div class="flex-center">
+                  ${previewImgHtml}<span id="chevron-${safeFolder}">${CHEVRON_ICON}</span>
+                </div>
+              </div>
+              <div id="list-${safeFolder}" class="flex-column source-file-list" style="display: none;">${files.join('')}</div>
+            </div>`;
+            })
+            .join('');
+        } catch (err) {
+          console.error('加载失败:', err);
+          bundleListEl.innerHTML = '<div class="loading">加载文件列表失败</div>';
+          sourceListEl.innerHTML = '<div class="loading">加载源文件失败</div>';
+          buildTimeEl.textContent = '';
+        }
+      }
+
+      loadData();
+    </script>
+  </body>
+</html>
