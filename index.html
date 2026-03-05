@@ -234,10 +234,13 @@
 
       const CHEVRON_ICON = `<svg class="chevron-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>`;
 
-      function renderFileItem(name, href) {
+      function renderFileItem(name, href, hash) {
         return `
         <div class="flex-space file-item">
-          <span class="file-name">${name}</span>
+          <div class="flex-center" style="justify-content: flex-start;">
+            <span class="file-name">${name}</span>
+            <span class="source-tag tag-urdf" style="margin-left: 0.5rem;">${hash}</span>
+          </div>
           <a class="download-btn" href="${href}" download>${DOWNLOAD_ICON}</a>
         </div>`;
       }
@@ -289,7 +292,13 @@
             return;
           }
 
-          bundleListEl.innerHTML = data.files.map(name => renderFileItem(name, `${BUNDLE_BASE}/${name}`)).join('');
+          bundleListEl.innerHTML = data.files
+            .map(name => {
+              const folder = name.replace(/\.zip$/, '');
+              const hash = data.hash[folder];
+              return renderFileItem(name, `${BUNDLE_BASE}/${name}`, hash);
+            })
+            .join('');
 
           // 加载 Source：根据 bundle 文件名推导文件夹名，加载 manifest.json
           const folderNames = data.files.map(f => f.replace(/\.zip$/, ''));
@@ -341,8 +350,11 @@
             <div class="section">
               <div class="flex-space source-group-title" onclick="toggleSource('${safeFolder}')">
                 <div class="flex-column">
-                  <div>🤖 ${manifest.name || folder}</div>
-                  ${manifest.description ? `<div class="source-group-desc">${manifest.description}</div>` : ''}
+                  <div class="flex-center" style="justify-content: flex-start;">
+                    🤖 ${manifest.name || folder}
+                    <span class="source-tag tag-urdf" style="margin-left: 0.5rem;">${data.hash[folder]}</span>
+                  </div>
+                  <div class="source-group-desc">${manifest.description}</div>
                 </div>
                 <div class="flex-center">
                   ${previewImgHtml}<span id="chevron-${safeFolder}">${CHEVRON_ICON}</span>
