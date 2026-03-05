@@ -234,12 +234,13 @@
 
       const CHEVRON_ICON = `<svg class="chevron-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>`;
 
-      function renderFileItem(name, href, hash) {
+      function renderFileItem(name, href, hash, size) {
         return `
         <div class="flex-space file-item">
           <div class="flex-center" style="justify-content: flex-start;">
             <span class="file-name">${name}</span>
             <span class="source-tag tag-urdf" style="margin-left: 0.5rem;">${hash}</span>
+            <span class="source-tag tag-mjcf" style="margin-left: 0.5rem;">${size} MB</span>
           </div>
           <a class="download-btn" href="${href}" download>${DOWNLOAD_ICON}</a>
         </div>`;
@@ -293,22 +294,16 @@
           }
 
           bundleListEl.innerHTML = data.files
-            .map(name => {
-              const folder = name.replace(/\.zip$/, '');
-              const hash = data.hash[folder];
-              return renderFileItem(name, `${BUNDLE_BASE}/${name}`, hash);
-            })
+            .map(file => renderFileItem(file.name, `${BUNDLE_BASE}/${file.name}`, file.hash, file.size))
             .join('');
 
-          // 加载 Source：根据 bundle 文件名推导文件夹名，加载 manifest.json
-          const folderNames = data.files.map(f => f.replace(/\.zip$/, ''));
           const manifests = await Promise.all(
-            folderNames.map(async folder => {
+            data.files.map(async file => {
               try {
-                const mRes = await fetch(`./${folder}/manifest.json`);
+                const mRes = await fetch(`./${file.name}/manifest.json`);
                 if (!mRes.ok) return null;
                 const manifest = await mRes.json();
-                return { folder, manifest };
+                return { file, manifest };
               } catch {
                 return null;
               }
@@ -322,28 +317,28 @@
           }
 
           sourceListEl.innerHTML = validManifests
-            .map(({ folder, manifest }) => {
+            .map(({ file, manifest }) => {
               const files = [];
 
               if (manifest.preview) {
-                files.push(renderSourceFileItem(manifest.preview, folder, 'preview'));
+                files.push(renderSourceFileItem(manifest.preview, file.name, 'preview'));
               }
               if (manifest.urdf) {
-                files.push(renderSourceFileItem(manifest.urdf, folder, 'urdf'));
+                files.push(renderSourceFileItem(manifest.urdf, file.name, 'urdf'));
               }
               if (manifest.mjcf) {
-                files.push(renderSourceFileItem(manifest.mjcf, folder, 'mjcf'));
+                files.push(renderSourceFileItem(manifest.mjcf, file.name, 'mjcf'));
               }
               if (manifest.meshes && manifest.meshes.length > 0) {
                 manifest.meshes.forEach(mesh => {
-                  files.push(renderSourceFileItem(mesh, folder, 'mesh'));
+                  files.push(renderSourceFileItem(mesh, file.name, 'mesh'));
                 });
               }
 
-              const safeFolder = folder.replace(/[^a-zA-Z0-9]/g, '_');
+              const safeFolder = file.name.replace(/[^a-zA-Z0-9]/g, '_');
 
               const previewImgHtml = manifest.preview
-                ? `<div class="flex-center" style="margin-right:0.5rem"><img src="./${folder}/${manifest.preview}" alt="${manifest.name || folder} Preview" class="source-preview-img" /></div>`
+                ? `<div class="flex-center" style="margin-right:0.5rem"><img src="./${file.name}/${manifest.preview}" alt="${manifest.name || file.name} Preview" class="source-preview-img" /></div>`
                 : '';
 
               return `
@@ -351,8 +346,8 @@
               <div class="flex-space source-group-title" onclick="toggleSource('${safeFolder}')">
                 <div class="flex-column">
                   <div class="flex-center" style="justify-content: flex-start;">
-                    🤖 ${manifest.name || folder}
-                    <span class="source-tag tag-urdf" style="margin-left: 0.5rem;">${data.hash[folder]}</span>
+                    🤖 ${manifest.name || file.name}
+                    <span class="source-tag tag-urdf" style="margin-left: 0.5rem;">${file.hash}</span>
                   </div>
                   <div class="source-group-desc">${manifest.description}</div>
                 </div>

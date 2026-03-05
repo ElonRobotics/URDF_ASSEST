@@ -3,7 +3,7 @@ const path = require('path');
 const archiver = require('archiver');
 const crypto = require('crypto');
 
-const EXCLUDE_DIRS = new Set(['bundle', 'utils', '.github', '.git']);
+const EXCLUDE_DIRS = new Set(['bundle', 'utils', '.github', '.git', '.edgeone']);
 
 /**
  * 计算文件夹内容的 hash
@@ -51,8 +51,9 @@ function zipDirectory(sourceDir, outPath, rootDir) {
     });
 
     output.on('close', () => {
-      console.log(`压缩完成: ${archive.pointer()} total bytes`);
-      resolve();
+      const fileSize = archive.pointer();
+      console.log(`压缩完成: ${fileSize} total bytes`);
+      resolve(fileSize);
     });
 
     archive.on('error', err => {
@@ -60,15 +61,9 @@ function zipDirectory(sourceDir, outPath, rootDir) {
     });
 
     archive.pipe(output);
-
     // 获取文件夹名称，作为 zip 内部的根路径
     const dirName = path.basename(sourceDir);
-
-    // 将文件夹内容添加到压缩包
-    // 注意：我们希望 zip 内部包含文件夹本身（即 fourier_n1/file1, fourier_n1/file2...）
-    // 这与原 python 逻辑 `arcname = os.path.relpath(file_path, root_dir)` 一致
     archive.directory(sourceDir, dirName);
-
     archive.finalize();
   });
 }
@@ -97,7 +92,6 @@ async function main() {
 
   const buildTime = new Date().toISOString().replace(/\.\d{3}Z$/, 'Z');
   const files = [];
-  const hashes = {};
 
   for (const dirName of dirsToZip) {
     const dirPath = path.join(rootDir, dirName);
@@ -108,10 +102,13 @@ async function main() {
 
     try {
       // 并发执行压缩和 hash 计算
-      const [_, dirHash] = await Promise.all([zipDirectory(dirPath, zipPath, rootDir), getFolderHash(dirPath)]);
-
-      files.push(zipName);
-      hashes[dirName] = dirHash;
+      const [fileSize, dirHash] = await Promise.all([zipDirectory(dirPath, zipPath, rootDir), getFolderHash(dirPath)]);
+      files.push({
+        name: dirName,
+        file: zipName,
+        hash: dirHash,
+        size: (fileSize / 1024 / 1024).toFixed(2),
+      });
     } catch (error) {
       console.error(`处理 ${dirName} 失败:`, error.message);
     }
@@ -120,14 +117,13 @@ async function main() {
   const listData = {
     build_time: buildTime,
     files: files,
-    hash: hashes,
   };
 
   const listJsonPath = path.join(bundleDir, 'list.json');
   fs.writeFileSync(listJsonPath, JSON.stringify(listData, null, 2), 'utf-8');
 
   console.log(`完成！共压缩 ${files.length} 个文件夹`);
-  console.log(`生成Hash: ${JSON.stringify(hashes)}`)
+  console.log(`生成文件: ${JSON.stringify(files)}`);
   console.log(`构建时间: ${buildTime}`);
 }
 
