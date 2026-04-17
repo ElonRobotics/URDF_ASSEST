@@ -294,7 +294,7 @@
           }
 
           bundleListEl.innerHTML = data.files
-            .map(file => renderFileItem(file.name, `${BUNDLE_BASE}/${file.name}`, file.hash, file.size))
+            .map(file => renderFileItem(file.name, `${BUNDLE_BASE}/${file.file}`, file.hash, file.size))
             .join('');
 
           const manifests = await Promise.all(
